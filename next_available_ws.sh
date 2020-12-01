@@ -19,12 +19,19 @@ containsElement () {
   return 1
 }
 
+moveContainer () {
+  ACTIVE_WIN=$(xprop -id $(xdotool getactivewindow) | grep 'WM_NAME(STRING)' | cut -d'"' -f2)
+  i3-msg move container to workspace $ws
+  wmctrl -r $ACTIVE_WIN -b add,demands_attention
+}
 
 # check for move container flag
-moveContainer=false
-while getopts 'm' opt; do
+moveContainerFlag=false
+moveContainerAndFocusFlag=false
+while getopts ':fm' opt; do
     case $opt in
-        m) moveContainer=true ;;
+        f) moveContainerAndFocusFlag=true ;;
+        m) moveContainerFlag=true ;;
         *) echo 'Error in command line parsing' >&2
             exit 1
     esac
@@ -32,18 +39,20 @@ done
 
 # loop through all workspaces and find first that isn't in use
 for ws in ${ALL_WS[@]}
-do 
+do
     if  ! containsElement $ws "${WS_ARRAY[@]}"
     then
-        if "$moveContainer"
+        if "$moveContainerAndFocusFlag"
         then
-            # if -m flag is passed, move current container to new workspace
-            ACTIVE_WIN=$(xprop -id $(xdotool getactivewindow) | grep 'WM_NAME(STRING)' | cut -d'"' -f2)
-            i3-msg move container to workspace $ws
-            wmctrl -r $ACTIVE_WIN -b add,demands_attention
+          moveContainer
+          i3-msg workspace number $ws
         else
-            # otherwise, switch to new empty workspace
-            i3-msg workspace $ws
+          if "$moveContainerFlag"
+          then
+            moveContainer
+          else
+              i3-msg workspace number $ws
+          fi
         fi
         break
     fi
